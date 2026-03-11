@@ -99,6 +99,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     return true;
   }
 
+  function sanitizeFilename(input: string, fallback: string) {
+    const sanitized = input
+      .normalize()
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\.+$/g, '')
+      .replace(/\s+\./g, '.')
+      .replace(/\.{2,}/g, '.')
+      .trim();
+
+    return sanitized || fallback;
+  }
+
   async function emitEvent(event: string, data: Record<string, any>) {
     const modelDef = strapi.getModel(FILE_MODEL_UID);
     const sanitizedData = await sanitize.sanitizers.defaultSanitizeOutput(
@@ -618,17 +631,18 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     await provider.importFromVimeoId(fileData, id);
 
     const vimeoName = fileData.provider_metadata?.vimeoName;
+    const fallbackName = `vimeo-${id}`;
 
-    let rawName = (fileInfo.name || vimeoName || `vimeo-${id}`).normalize();
-
-    if (!isValidFilename(rawName)) {
-      throw new ApplicationError('File name contains invalid characters');
-    }
+    let rawName = sanitizeFilename(fileInfo.name || vimeoName || fallbackName, fallbackName);
 
     const ext = fileData.ext || '';
 
     if (ext && !rawName.toLowerCase().endsWith(ext.toLowerCase())) {
       rawName = `${rawName}${ext}`;
+    }
+
+    if (!isValidFilename(rawName)) {
+      throw new ApplicationError('File name contains invalid characters');
     }
 
     const basename = ext ? path.basename(rawName, ext) : rawName;

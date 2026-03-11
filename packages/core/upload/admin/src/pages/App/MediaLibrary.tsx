@@ -171,8 +171,8 @@ export const MediaLibrary = () => {
   const refreshAssets = () => {
     setQuery({
       ...query,
-      page: query?.page ?? 1,
-    });
+      _mlRefresh: Date.now(),
+    } as typeof query);
   };
   const toggleEditFolderDialog = ({ created = false } = {}) => {
     // folders are only displayed on the first page, therefore
